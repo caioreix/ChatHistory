@@ -342,11 +342,19 @@ public class History {
             _history.RemoveAt(_history.Count - 1);
         }
 
+        if (!ENV.PersistOnRestart.Value) {
+            return;
+        }
+
         // Save just the new entry
         SaveHistoryEntry(text);
     }
 
     public static void Initialize() {
+        if (!ENV.PersistOnRestart.Value) {
+            return;
+        }
+
         var startTime = DateTime.Now;
         Log.Trace($"Loading history from {HistoryFilePath}");
 
