@@ -5,7 +5,6 @@ using System.Linq;
 using RTLTMPro;
 using UnityEngine;
 using Utils.Database;
-using Utils.Logger;
 
 namespace ChatHistory.Systems;
 
@@ -89,23 +88,25 @@ public class History {
             .Where(item => item.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
+
     public static string FindAndNavigateHistory(string prefix, bool searchUp) {
         var matches = SearchHistory(prefix);
         if (matches.Count == 0)
             return string.Empty;
 
         int direction = searchUp ? 1 : -1;
-        int count = 0;
+        int checkedItems = 0;
         int originalPosition = _currentPosition;
 
-        while (count < _history.Count) {
+        while (checkedItems < _history.Count) {
             // Calculate new position
             int newPos = _currentPosition + direction;
 
             // Handle boundaries
             if (searchUp && newPos >= _history.Count) {
-                _currentPosition = count--; // Stay at last item when going up
-                break;
+                // We've hit the end while going up, restore position
+                _currentPosition = originalPosition;
+                return string.Empty;
             }
             if (!searchUp && newPos < -1) {
                 _currentPosition = -1; // Stay at -1 position when going down
@@ -125,13 +126,11 @@ public class History {
                 !string.Equals(current, prefix, StringComparison.OrdinalIgnoreCase))
                 return current;
 
-            count++;
+            checkedItems++;
         }
 
         // If no match was found, restore original position
-        if (count >= _history.Count)
-            _currentPosition = originalPosition;
-
+        _currentPosition = originalPosition;
         return string.Empty;
     }
 
