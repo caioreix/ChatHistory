@@ -2,7 +2,6 @@ using System;
 using ChatHistory.Settings;
 using RTLTMPro;
 using UnityEngine;
-using Utils.Logger;
 
 namespace ChatHistory.Systems;
 
