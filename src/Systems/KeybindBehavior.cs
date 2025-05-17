@@ -9,6 +9,10 @@ public class KeyBindsBehaviour : MonoBehaviour {
 
     public KeyBindsBehaviour(IntPtr handle) : base(handle) { }
 
+    public void Start() {
+        History.Initialize();
+    }
+
     public void Update() {
         if (History.InputField != null) {
             History.InputField.placeholder.enabled = true;

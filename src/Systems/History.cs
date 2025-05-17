@@ -1,7 +1,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using BepInEx;
+using ChatHistory.Settings;
+using Newtonsoft.Json;
 using RTLTMPro;
 using UnityEngine;
 using Utils.Database;
@@ -171,9 +175,9 @@ public class History {
         if (state == false) {
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
                 Prepend(LastNonEmptyMessage);
-                LastNonEmptyMessage = "";
             }
 
+            LastNonEmptyMessage = "";
             _currentPosition = -1;
             SetPlaceHolderEmpty();
         }
@@ -212,6 +216,88 @@ public class History {
         return _currentPosition;
     }
 
+
+    private static readonly string HistoryFilePath = Path.Combine(Paths.PluginPath, "ChatHistory", "chat.history");
+    private static int MaxHistorySize => ENV.MaximumHistorySize.Value;
+
+    public static void SaveHistoryEntry(string text) {
+        try {
+            // Ensure directory exists
+            string directory = Path.GetDirectoryName(HistoryFilePath);
+            if (!Directory.Exists(directory)) {
+                Directory.CreateDirectory(directory);
+            }
+
+            // Encode the string to handle special characters and line breaks
+            string encodedText = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text));
+
+            // Use StreamWriter with append mode to add a single entry at the beginning
+            using (StreamWriter writer = new StreamWriter(HistoryFilePath, true)) {
+                writer.WriteLine(encodedText);
+            }
+
+            // Check if we need to trim the file
+            TrimHistoryFileIfNeeded();
+        } catch (Exception ex) {
+            Debug.LogError($"[ChatHistory] Failed to save history entry: {ex.Message}");
+        }
+    }
+
+    private static void TrimHistoryFileIfNeeded() {
+        try {
+            // Count lines in the file
+            int lineCount = 0;
+            using (StreamReader reader = new StreamReader(HistoryFilePath)) {
+                while (reader.ReadLine() != null) {
+                    lineCount++;
+                }
+            }
+
+            // If we're within limits, do nothing
+            if (lineCount <= MaxHistorySize)
+                return;
+
+            // Otherwise, read all lines, keep only the latest MaxHistorySize entries, and rewrite
+            string[] allLines = File.ReadAllLines(HistoryFilePath);
+            string[] trimmedLines = allLines.Take(MaxHistorySize).ToArray();
+            File.WriteAllLines(HistoryFilePath, trimmedLines);
+
+        } catch (Exception ex) {
+            Debug.LogError($"[ChatHistory] Failed to trim history file: {ex.Message}");
+        }
+    }
+
+    public static void LoadHistory() {
+        try {
+            _history.Clear();
+
+            if (File.Exists(HistoryFilePath)) {
+                // Read all lines and decode them
+                string[] encodedLines = File.ReadAllLines(HistoryFilePath);
+
+                // Process lines in reverse order (newest first)
+                foreach (string encodedLine in encodedLines.Reverse()) {
+                    try {
+                        byte[] bytes = Convert.FromBase64String(encodedLine);
+                        string message = System.Text.Encoding.UTF8.GetString(bytes);
+                        _history.Add(message);
+
+                        // Stop if we've reached the maximum size
+                        if (_history.Count >= MaxHistorySize)
+                            break;
+                    } catch {
+                        // Skip corrupted entries
+                        continue;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            Debug.LogError($"Failed to load history: {ex.Message}");
+            // Initialize empty history if loading fails
+            _history = [];
+        }
+    }
+
     public static void Prepend(string text) {
         if (string.IsNullOrEmpty(text))
             return;
@@ -220,5 +306,17 @@ public class History {
             return;
 
         _history.Insert(0, text);
+
+        // Trim in-memory history if needed
+        if (_history.Count > MaxHistorySize) {
+            _history.RemoveAt(_history.Count - 1);
+        }
+
+        // Save just the new entry
+        SaveHistoryEntry(text);
+    }
+
+    public static void Initialize() {
+        LoadHistory();
     }
 }
