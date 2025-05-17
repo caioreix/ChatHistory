@@ -1,12 +1,14 @@
-using BepInEx.Configuration;
+// using BepInEx.Unity.IL2CPP.UnityEngine;
+using UnityEngine;
+using Utils.Settings;
 
-namespace PluginName.Settings;
+namespace ChatHistory.Settings;
 
 public static class ENV {
     // Mission_General
-    private readonly static string example = "0.🧪 Example";
-    public static ConfigEntry<float> Example;
-
+    private readonly static string settings = "0.⚙️ Settings";
+    public static ConfigElement<KeyCode> DownHistoryKey { get; set; }
+    public static ConfigElement<KeyCode> UpHistoryKey { get; set; }
 
     public static class Testing {
 
@@ -16,12 +18,18 @@ public static class ENV {
 
         // Load the plugin config variables.
         private static void load() {
-            // Mission_General
-            Example = Utils.Settings.Config.Bind(
-                example,
-                nameof(Example),
-                2F,
-                "Just an example value :)"
+            DownHistoryKey = Utils.Settings.Config.Bind(
+                settings,
+                nameof(DownHistoryKey),
+                KeyCode.DownArrow,
+                "Down Arrow Key to scroll down the chat history."
+            );
+
+            UpHistoryKey = Utils.Settings.Config.Bind(
+                settings,
+                nameof(UpHistoryKey),
+                KeyCode.UpArrow,
+                "Up Arrow Key to scroll up the chat history."
             );
 
             Utils.Settings.Config.Save();

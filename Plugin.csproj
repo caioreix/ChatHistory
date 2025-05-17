@@ -2,31 +2,46 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <ProjectName>PluginName</ProjectName>
-    <AssemblyName>PluginName</AssemblyName>
-    <RootNamespace>PluginName</RootNamespace>
-    <Description>My first plugin</Description>
-    <Version>1.0.0</Version>
+    <ProjectName>ChatHistory</ProjectName>
+    <AssemblyName>ChatHistory</AssemblyName>
+    <RootNamespace>ChatHistory</RootNamespace>
+    <SolutionName>ChatHistory</SolutionName>
+    <Description>ChatHistory is a plugin for managing chat history client side</Description>
+    <Version>0.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <NoWarn>IDE0130;NU5104</NoWarn>
 
-    <RestoreAdditionalProjectSources>
-      https://api.nuget.org/v3/index.json;
-      https://nuget.bepinex.dev/v3/index.json
-    </RestoreAdditionalProjectSources>
+    <BepInExVersion>6.0.0-be.733</BepInExVersion>
+
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|AnyCPU'">
+    <OutputPath>bin\Test\</OutputPath>
+    <DefineConstants>TEST</DefineConstants>
+  </PropertyGroup>
+
+  <Target Name="Thunderstore Copy to Dist" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release'">
+    <Copy SourceFiles="$(OutDir)$(ProjectName)$(ProjectVersion).dll" DestinationFolder="./dist" />
+  </Target>
+
   <Import Project="Config.xml" Condition=" '$(Configuration)' == 'Test'" />
   <Target Name="CopyDLLs" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Test'">
-    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(BuildDestinationFolder)/Test" />
+    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(BuildClientDestinationFolder)/Test" Condition="'$(BuildClientDestinationFolder)' != ''" />
+    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(BuildServerDestinationFolder)/Test" Condition="'$(BuildServerDestinationFolder)' != ''" />
+    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="./dist" />
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
-    <PackageReference Include="BepInEx.Core" Version="6.0.0-be.*" IncludeAssets="compile" />
+    <PackageReference Include="BepInEx.Unity.IL2CPP" Version="$(BepInExVersion)" IncludeAssets="compile" />
+    <PackageReference Include="BepInEx.Core" Version="$(BepInExVersion)" IncludeAssets="compile" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-
-    <!-- <Reference Include=".\dlls\*.dll" /> -->
+    <PackageReference Include="VRising.Unhollowed.Client" Version="1.1.7.9169101" />
   </ItemGroup>
+
 </Project>

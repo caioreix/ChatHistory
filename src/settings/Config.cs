@@ -1,8 +1,7 @@
-using System.Reflection;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 
-namespace PluginName.Settings;
+namespace ChatHistory.Settings;
 
 public class Config {
     public static void Load(ConfigFile configFile, ManualLogSource logger, string worldType) {
