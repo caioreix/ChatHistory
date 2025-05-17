@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using RTLTMPro;
 using UnityEngine;
 using Utils.Database;
+using Utils.Logger;
 
 namespace ChatHistory.Systems;
 
@@ -216,9 +217,10 @@ public class History {
         return _currentPosition;
     }
 
-
     private static readonly string HistoryFilePath = Path.Combine(Paths.PluginPath, "ChatHistory", "chat.history");
     private static int MaxHistorySize => ENV.MaximumHistorySize.Value;
+    private static int TrimThreshold => ENV.MaximumHistorySize.Value * 2 < 100 ? ENV.MaximumHistorySize.Value * 2 : ENV.MaximumHistorySize.Value + 100; // Trim when file is 2x the max size
+    private static int _entryCounter = 0; // Count entries between checks
 
     public static void SaveHistoryEntry(string text) {
         try {
@@ -231,39 +233,56 @@ public class History {
             // Encode the string to handle special characters and line breaks
             string encodedText = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text));
 
-            // Use StreamWriter with append mode to add a single entry at the beginning
+            // Use StreamWriter with append mode to add a single entry
             using (StreamWriter writer = new StreamWriter(HistoryFilePath, true)) {
                 writer.WriteLine(encodedText);
             }
 
-            // Check if we need to trim the file
-            TrimHistoryFileIfNeeded();
+            // Increment counter and check if we should verify file size
+            _entryCounter++;
+            CheckAndTrimIfNeeded();
         } catch (Exception ex) {
-            Debug.LogError($"[ChatHistory] Failed to save history entry: {ex.Message}");
+            Log.Error($"Failed to save history entry: {ex.Message}");
         }
     }
 
-    private static void TrimHistoryFileIfNeeded() {
+    private static void CheckAndTrimIfNeeded() {
+        if (_entryCounter <= TrimThreshold) {
+            return;
+        }
+        _entryCounter = _history.Count;
+
         try {
-            // Count lines in the file
+            if (!File.Exists(HistoryFilePath)) {
+                return;
+            }
+
+            // Count lines
             int lineCount = 0;
             using (StreamReader reader = new StreamReader(HistoryFilePath)) {
                 while (reader.ReadLine() != null) {
                     lineCount++;
+
+                    // Early exit if we're already over threshold
+                    if (lineCount > TrimThreshold) {
+                        break;
+                    }
                 }
             }
 
-            // If we're within limits, do nothing
-            if (lineCount <= MaxHistorySize)
-                return;
+            // If we're over the overflow threshold, trim the file
+            if (lineCount > TrimThreshold) {
+                Log.Trace($"File exceeded threshold ({lineCount} > {TrimThreshold}), trimming...");
 
-            // Otherwise, read all lines, keep only the latest MaxHistorySize entries, and rewrite
-            string[] allLines = File.ReadAllLines(HistoryFilePath);
-            string[] trimmedLines = allLines.Take(MaxHistorySize).ToArray();
-            File.WriteAllLines(HistoryFilePath, trimmedLines);
+                string[] allLines = File.ReadAllLines(HistoryFilePath);
+                string[] trimmedLines = allLines.Skip(allLines.Length - MaxHistorySize).ToArray();
 
+                File.WriteAllLines(HistoryFilePath, trimmedLines);
+
+                Log.Trace($"Trimmed history file from {allLines.Length} to {trimmedLines.Length} entries");
+            }
         } catch (Exception ex) {
-            Debug.LogError($"[ChatHistory] Failed to trim history file: {ex.Message}");
+            Log.Error($"Failed to check/trim history file: {ex.Message}");
         }
     }
 
@@ -274,6 +293,7 @@ public class History {
             if (File.Exists(HistoryFilePath)) {
                 // Read all lines and decode them
                 string[] encodedLines = File.ReadAllLines(HistoryFilePath);
+                bool needsTrimming = encodedLines.Length > MaxHistorySize;
 
                 // Process lines in reverse order (newest first)
                 foreach (string encodedLine in encodedLines.Reverse()) {
@@ -290,11 +310,16 @@ public class History {
                         continue;
                     }
                 }
+
+                // Trim the file only once during load if needed
+                if (needsTrimming) {
+                    string[] trimmedLines = encodedLines.Skip(encodedLines.Length - MaxHistorySize).ToArray();
+                    File.WriteAllLines(HistoryFilePath, trimmedLines);
+                    Log.Trace($"Trimmed history file from {encodedLines.Length} to {trimmedLines.Length} entries");
+                }
             }
         } catch (Exception ex) {
-            Debug.LogError($"Failed to load history: {ex.Message}");
-            // Initialize empty history if loading fails
-            _history = [];
+            Log.Error($"Failed to load history: {ex.Message}");
         }
     }
 
@@ -318,5 +343,7 @@ public class History {
 
     public static void Initialize() {
         LoadHistory();
+        _entryCounter = _history.Count;
+        Log.Trace($"Loaded history with {_entryCounter} entries. Will trim if it exceeds {TrimThreshold} entries.");
     }
 }
