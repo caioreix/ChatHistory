@@ -239,7 +239,7 @@ public class History {
             }
 
             // Increment counter and check if we should verify file size
-            _entryCounter++;
+
             CheckAndTrimIfNeeded();
         } catch (Exception ex) {
             Log.Error($"Failed to save history entry: {ex.Message}");
@@ -247,9 +247,14 @@ public class History {
     }
 
     private static void CheckAndTrimIfNeeded() {
+        if (MaxHistorySize <= 0) {
+            return;
+        }
+        _entryCounter++;
         if (_entryCounter <= TrimThreshold) {
             return;
         }
+
         _entryCounter = _history.Count;
 
         try {
@@ -303,7 +308,7 @@ public class History {
                         _history.Add(message);
 
                         // Stop if we've reached the maximum size
-                        if (_history.Count >= MaxHistorySize)
+                        if (MaxHistorySize > 0 && _history.Count >= MaxHistorySize)
                             break;
                     } catch {
                         // Skip corrupted entries
@@ -312,7 +317,7 @@ public class History {
                 }
 
                 // Trim the file only once during load if needed
-                if (needsTrimming) {
+                if (MaxHistorySize > 0 && needsTrimming) {
                     string[] trimmedLines = encodedLines.Skip(encodedLines.Length - MaxHistorySize).ToArray();
                     File.WriteAllLines(HistoryFilePath, trimmedLines);
                     Log.Trace($"Trimmed history file from {encodedLines.Length} to {trimmedLines.Length} entries");
@@ -333,7 +338,7 @@ public class History {
         _history.Insert(0, text);
 
         // Trim in-memory history if needed
-        if (_history.Count > MaxHistorySize) {
+        if (MaxHistorySize > 0 && _history.Count > MaxHistorySize) {
             _history.RemoveAt(_history.Count - 1);
         }
 
@@ -342,8 +347,14 @@ public class History {
     }
 
     public static void Initialize() {
+        var startTime = DateTime.Now;
+        Log.Trace($"Loading history from {HistoryFilePath}");
+
         LoadHistory();
         _entryCounter = _history.Count;
-        Log.Trace($"Loaded history with {_entryCounter} entries. Will trim if it exceeds {TrimThreshold} entries.");
+
+        var elapsed = (DateTime.Now - startTime).TotalMilliseconds;
+        string limit = MaxHistorySize > 0 ? MaxHistorySize.ToString() : "∞";
+        Log.Trace($"Loaded history with {_entryCounter} entries in {elapsed:F2}ms. Will trim if it exceeds {limit} entries.");
     }
 }
