@@ -27,7 +27,6 @@ public class ClientChatSystemPatch {
     public class OnInputSelect {
         public static void Prefix(ClientChatSystem __instance) {
             History.SetInputField(__instance._ChatWindow.ChatInputField);
-            History.SetDefaultPlaceholder();
             History.SetFocusState(true);
         }
     }

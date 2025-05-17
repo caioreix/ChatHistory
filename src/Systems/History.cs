@@ -13,18 +13,11 @@ public class History {
     public static TMPro.TMP_InputField InputField = null;
     public static UnityEngine.UI.Graphic PlaceholderClone = null;
 
+    public static bool CanComplete() {
+        return !string.IsNullOrEmpty(PlaceholderClone.GetComponent<RTLTextMeshPro>().text.ToString());
+    }
+
     public static void SetInputField(TMPro.TMP_InputField inputField) {
-        // // inputField.placeholder
-        // PlaceholderClone = UnityEngine.Object.Instantiate(inputField.placeholder);
-        // // Save the original parent of the placeholder
-        // var originalParent = inputField.placeholder.transform.parent;
-        // // Create a dummy parent to store it temporarily if needed
-        // var tempParent = new UnityEngine.GameObject("TempPlaceholderParent").transform;
-        // // Reparent the placeholder
-        // inputField.placeholder.transform.SetParent(tempParent);
-        // // Clone it
-        // PlaceholderClone = UnityEngine.Object.Instantiate(inputField.placeholder);
-        // Move the original placeholder back to its original parent
         if (!Cache.Exists("PlaceholderClone")) {
             PlaceholderClone = UnityEngine.Object.Instantiate(inputField.placeholder);
             PlaceholderClone.transform.SetParent(inputField.placeholder.transform.parent);
@@ -48,16 +41,12 @@ public class History {
             Log.Debug($"PlaceholderClone {inputField.placeholder.transform.parent.name}: {inputField.placeholder.transform.position}");
         }
 
-        // Cleanup the temporary object
-        // UnityEngine.Object.Destroy(tempParent.gameObject);
-
-
         InputField = inputField;
     }
 
     private static List<string> _history = [];
     private static bool _isFocused = false;
-    private static int _currentPosition = 0;
+    private static int _currentPosition = -1;
     public static bool _canComplete = false;
     public static string _defaultPlaceholder = "";
 
@@ -71,17 +60,16 @@ public class History {
     }
 
     public static void Reset(string message) {
-        if (string.IsNullOrEmpty(message)) {
-            PlaceholderClone.GetComponent<RTLTextMeshPro>().text = _defaultPlaceholder;
-            PlaceholderClone.enabled = true;
-        }
+        PlaceholderClone.GetComponent<RTLTextMeshPro>().text = "";
 
-        _currentPosition = 0;
+        InputField.placeholder.enabled = true;
+
+        _currentPosition = -1;
         _canComplete = false;
     }
 
     public static string GetHistory(int index) {
-        if (_history.Count == 0) {
+        if (_history.Count == 0 || index == -1) {
             return string.Empty;
         } else if (index < 0) {
             index = 0;
@@ -105,37 +93,50 @@ public class History {
             .ToList();
     }
 
+
     public static string FindAndNavigateHistory(string prefix, bool searchUp) {
         var matches = SearchHistory(prefix);
         if (matches.Count == 0)
             return string.Empty;
 
-        int startPos = _currentPosition;
         int direction = searchUp ? 1 : -1;
         int count = 0;
+        int originalPosition = _currentPosition;
 
-        while (count < matches.Count) {
-            int newPos = (_currentPosition + direction) % _history.Count;
-            if (newPos < 0) newPos = _history.Count - 1;
+        while (count < _history.Count) {
+            // Calculate new position
+            int newPos = _currentPosition + direction;
+
+            // Handle boundaries
+            if (newPos < -1 || newPos >= _history.Count)
+                break;
 
             _currentPosition = newPos;
+
+            // If we've reached -1, return empty string
+            if (_currentPosition == -1)
+                return string.Empty;
+
             var current = GetCurrentItem();
 
-            if (current.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            // Skip if current exactly matches the prefix, only return if it starts with but is longer
+            if (current.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(current, prefix, StringComparison.OrdinalIgnoreCase))
                 return current;
-
-            if (_currentPosition == startPos)
-                break;
 
             count++;
         }
+
+        // If no match was found, restore original position
+        if (count >= _history.Count)
+            _currentPosition = originalPosition;
 
         return string.Empty;
     }
 
     public static string NavigateUp(string currentInput = "") {
         if (_history.Count == 0)
-            return currentInput;
+            return string.Empty;
 
         if (!string.IsNullOrEmpty(currentInput)) {
             return FindAndNavigateHistory(currentInput, true);
@@ -147,7 +148,7 @@ public class History {
 
     public static string NavigateDown(string currentInput = "") {
         if (_history.Count == 0)
-            return currentInput;
+            return string.Empty;
 
         if (!string.IsNullOrEmpty(currentInput)) {
             return FindAndNavigateHistory(currentInput, false);
@@ -157,9 +158,19 @@ public class History {
         return GetCurrentItem();
     }
 
+    public static void SetPlaceHolderEmpty() {
+        if (PlaceholderClone == null) {
+            return;
+        }
+
+        PlaceholderClone.GetComponent<RTLTextMeshPro>().text = "";
+        PlaceholderClone.enabled = false;
+    }
+
     public static bool SetFocusState(bool state) {
         if (state == false) {
-            _currentPosition = 0;
+            _currentPosition = -1;
+            SetPlaceHolderEmpty();
         }
 
         _isFocused = state;
@@ -171,13 +182,18 @@ public class History {
     }
 
     public static int JumpCurrentPosition(int jumps = 1) {
+        int length = _history.Count;
+        if (length == 0) {
+            _currentPosition = -1;
+            return _currentPosition;
+        }
+
         _currentPosition += jumps;
 
-        int length = _history.Count;
-        if (_currentPosition >= length && length > 0) {
+        if (_currentPosition >= length) {
             _currentPosition = length - 1;
-        } else if (_currentPosition < 0 || length == 0) {
-            _currentPosition = 0;
+        } else if (_currentPosition < 0) {
+            _currentPosition = -1;
         }
 
         return _currentPosition;
@@ -193,6 +209,9 @@ public class History {
 
     public static void Prepend(string message) {
         if (string.IsNullOrEmpty(message))
+            return;
+
+        if (_history.Count > 0 && _history[0] == message)
             return;
 
         _history.Insert(0, message);

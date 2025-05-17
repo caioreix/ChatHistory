@@ -10,53 +10,49 @@ public class KeyBindsBehaviour : MonoBehaviour {
 
     public KeyBindsBehaviour(IntPtr handle) : base(handle) { }
 
-    private readonly long threshold = 100;
-    // public void Start() { }
-
     public void Update() {
+        if (History.InputField != null) {
+            History.InputField.placeholder.enabled = true;
+        }
+
         if (!History.IsFocused()) {
             return;
         }
 
         if (Input.GetKeyDown(ENV.DownHistoryKey.Value)) {
-            // int pos = History.JumpCurrentPosition(-1);
-            // Log.Debug($"History[{pos}]: {History.GetHistory(pos)}");
             HistoryDown();
         }
 
         if (Input.GetKeyDown(ENV.UpHistoryKey.Value)) {
-            // HistoryUp();
+            HistoryUp();
         }
 
         if (Input.GetKeyDown(KeyCode.RightArrow)) {
-            // HistoryComplete();
+            History.InputField.placeholder.enabled = true;
+            HistoryComplete();
         }
 
-        if (Input.GetKeyDown(KeyCode.Tab)) {
-            if (History.PlaceholderClone.enabled) {
-                History.PlaceholderClone.enabled = false;
-            }
-            History.SetDefaultPlaceholder();
-            History._canComplete = false;
+        if (Input.GetKeyDown(KeyCode.LeftArrow)) {
+            History.InputField.placeholder.enabled = true;
         }
     }
 
     private static void HistoryComplete() {
-        if (History._canComplete) {
-            RTLTextMeshPro placeholder = History.PlaceholderClone.GetComponent<RTLTextMeshPro>();
-            History.InputField.text = placeholder.text.ToString();
+        if (History.CanComplete()) {
+            RTLTextMeshPro textMesh = History.PlaceholderClone.GetComponent<RTLTextMeshPro>();
+            History.InputField.text = textMesh.text.ToString();
             History.InputField.stringPosition = History.InputField.text.Length;
             History.PlaceholderClone.enabled = false;
-            History._canComplete = false;
+            textMesh.text = "";
         }
     }
 
     private static void HistoryUp() {
         string currentInput = History.InputField.text;
         string historyItem = History.NavigateUp(currentInput);
-        // History.InputField.text = historyItem;
 
         if (string.IsNullOrEmpty(historyItem)) {
+            History.InputField.stringPosition = currentInput.Length;
             return;
         }
 
@@ -71,9 +67,10 @@ public class KeyBindsBehaviour : MonoBehaviour {
     private static void HistoryDown() {
         string currentInput = History.InputField.text;
         string historyItem = History.NavigateDown(currentInput);
-        // History.InputField.text = historyItem;
 
         if (string.IsNullOrEmpty(historyItem)) {
+            History.PlaceholderClone.GetComponent<RTLTextMeshPro>().text = "";
+            History.PlaceholderClone.enabled = false;
             return;
         }
 
