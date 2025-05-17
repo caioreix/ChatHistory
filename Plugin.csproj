@@ -6,7 +6,7 @@
     <AssemblyName>ChatHistory</AssemblyName>
     <RootNamespace>ChatHistory</RootNamespace>
     <SolutionName>ChatHistory</SolutionName>
-    <Description>ChatHistory is a plugin for managing chat history client side</Description>
+    <Description>A VRising plugin that enhances chat functionality by allowing players to navigate, and manage their chat history.</Description>
     <Version>0.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
