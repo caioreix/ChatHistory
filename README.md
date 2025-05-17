@@ -6,7 +6,8 @@ A VRising plugin that enhances chat functionality by allowing players to navigat
 
 - **Message History Navigation**: Browse through previously sent messages using arrow keys
 - **Auto-completion**: Complete messages from your chat history with a single keypress
-- **Custom Keybinds**: Configure navigation keys to your preference
+- **Custom KeyBinds**: Configure navigation keys to your preference
+- **History Persistence**: Save the history entries locally
 
 ## Installation
 
@@ -28,6 +29,16 @@ After running the plugin once, a configuration file will be created at:
 
 ```
 [0.⚙️ Settings]
+
+## The maximum number of messages to keep in the chat history. If the number of messages exceeds this value, the oldest messages will be removed. If set to <= 0, the history will not be limited (use with caution).
+# Setting type: Int32
+# Default value: 50
+MaximumHistorySize = 50
+
+## If true, the chat history will be saved and loaded on restart. If false, the chat history will be lost on restart.
+# Setting type: Boolean
+# Default value: true
+PersistOnRestart = true
 
 ## Down Arrow Key to scroll down the chat history.
 # Setting type: KeyCode
