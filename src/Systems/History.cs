@@ -12,6 +12,7 @@ namespace ChatHistory.Systems;
 public class History {
     public static TMPro.TMP_InputField InputField = null;
     public static UnityEngine.UI.Graphic PlaceholderClone = null;
+    public static string LastNonEmptyMessage = "";
 
     public static bool CanComplete() {
         return !string.IsNullOrEmpty(PlaceholderClone.GetComponent<RTLTextMeshPro>().text.ToString());
@@ -24,23 +25,15 @@ public class History {
             PlaceholderClone.transform.position = inputField.placeholder.transform.position;
             PlaceholderClone.transform.localPosition = inputField.placeholder.transform.localPosition;
             PlaceholderClone.enabled = true;
-            // inputField.onValueChanged.AddListener(() => {
-            //     PlaceholderClone.enabled = false;
-            // });
 
             inputField.placeholder.transform.SetParent(inputField.placeholder.transform.parent.parent);
             inputField.placeholder.transform.localPosition = new Vector3(0, PlaceholderClone.transform.localPosition.y + 21, PlaceholderClone.transform.localPosition.z);
             RTLTextMeshPro textMesh = inputField.placeholder.GetComponent<RTLTextMeshPro>();
-            textMesh.color = new Color(
-                1,
-                1,
-                1,
-                1
-            );
+            textMesh.color = new Color(1, 1, 1, 1);
             Cache.Key("PlaceholderClone", true);
-            Log.Debug($"PlaceholderClone {inputField.placeholder.transform.parent.name}: {inputField.placeholder.transform.position}");
         }
 
+        SetPlaceHolderEmpty();
         InputField = inputField;
     }
 
@@ -59,7 +52,11 @@ public class History {
         PlaceholderClone.enabled = true;
     }
 
-    public static void Reset(string message) {
+    public static void Reset(string text) {
+        if (!string.IsNullOrEmpty(text)) {
+            LastNonEmptyMessage = text;
+        }
+
         PlaceholderClone.GetComponent<RTLTextMeshPro>().text = "";
 
         InputField.placeholder.enabled = true;
@@ -92,8 +89,6 @@ public class History {
             .Where(item => item.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
-
-
     public static string FindAndNavigateHistory(string prefix, bool searchUp) {
         var matches = SearchHistory(prefix);
         if (matches.Count == 0)
@@ -108,12 +103,18 @@ public class History {
             int newPos = _currentPosition + direction;
 
             // Handle boundaries
-            if (newPos < -1 || newPos >= _history.Count)
+            if (searchUp && newPos >= _history.Count) {
+                _currentPosition = count--; // Stay at last item when going up
                 break;
+            }
+            if (!searchUp && newPos < -1) {
+                _currentPosition = -1; // Stay at -1 position when going down
+                return string.Empty;
+            }
 
             _currentPosition = newPos;
 
-            // If we've reached -1, return empty string
+            // If we've reached -1 when navigating down, return empty string
             if (_currentPosition == -1)
                 return string.Empty;
 
@@ -169,6 +170,11 @@ public class History {
 
     public static bool SetFocusState(bool state) {
         if (state == false) {
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
+                Prepend(LastNonEmptyMessage);
+                LastNonEmptyMessage = "";
+            }
+
             _currentPosition = -1;
             SetPlaceHolderEmpty();
         }
@@ -207,13 +213,13 @@ public class History {
         return _currentPosition;
     }
 
-    public static void Prepend(string message) {
-        if (string.IsNullOrEmpty(message))
+    public static void Prepend(string text) {
+        if (string.IsNullOrEmpty(text))
             return;
 
-        if (_history.Count > 0 && _history[0] == message)
+        if (_history.Count > 0 && _history[0] == text)
             return;
 
-        _history.Insert(0, message);
+        _history.Insert(0, text);
     }
 }

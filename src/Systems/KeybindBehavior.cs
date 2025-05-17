@@ -27,13 +27,8 @@ public class KeyBindsBehaviour : MonoBehaviour {
             HistoryUp();
         }
 
-        if (Input.GetKeyDown(KeyCode.RightArrow)) {
-            History.InputField.placeholder.enabled = true;
+        if (Input.GetKeyDown(ENV.CompleteHistoryKey.Value)) {
             HistoryComplete();
-        }
-
-        if (Input.GetKeyDown(KeyCode.LeftArrow)) {
-            History.InputField.placeholder.enabled = true;
         }
     }
 
@@ -69,8 +64,7 @@ public class KeyBindsBehaviour : MonoBehaviour {
         string historyItem = History.NavigateDown(currentInput);
 
         if (string.IsNullOrEmpty(historyItem)) {
-            History.PlaceholderClone.GetComponent<RTLTextMeshPro>().text = "";
-            History.PlaceholderClone.enabled = false;
+            History.SetPlaceHolderEmpty();
             return;
         }
 

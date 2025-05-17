@@ -9,6 +9,7 @@ public static class ENV {
     private readonly static string settings = "0.⚙️ Settings";
     public static ConfigElement<KeyCode> DownHistoryKey { get; set; }
     public static ConfigElement<KeyCode> UpHistoryKey { get; set; }
+    public static ConfigElement<KeyCode> CompleteHistoryKey { get; set; }
 
     public static class Testing {
 
@@ -30,6 +31,13 @@ public static class ENV {
                 nameof(UpHistoryKey),
                 KeyCode.UpArrow,
                 "Up Arrow Key to scroll up the chat history."
+            );
+
+            CompleteHistoryKey = Utils.Settings.Config.Bind(
+                settings,
+                nameof(CompleteHistoryKey),
+                KeyCode.RightArrow,
+                "The key to complete the current chat message."
             );
 
             Utils.Settings.Config.Save();
