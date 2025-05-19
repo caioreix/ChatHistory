@@ -404,3 +404,5 @@ build
 dist
 .vscode
 dlls
+brainstorm
+chat.history*

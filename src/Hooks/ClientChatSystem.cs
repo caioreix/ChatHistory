@@ -9,8 +9,8 @@ namespace ChatHistory.Hooks;
 public class ClientChatSystemPatch {
     [HarmonyPatch(typeof(ClientChatSystem), nameof(ClientChatSystem._OnInputChanged))]
     public class OnInputChanged {
-        public static void Prefix(ref ClientChatSystem __instance, string text) {
-            History.Reset(text);
+        public static void Prefix() {
+            History.Reset();
         }
     }
 
