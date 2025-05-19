@@ -1,9 +1,8 @@
-﻿using System;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using ChatHistory.Systems;
 using HarmonyLib;
-using UnityEngine;
+using Utils.VRising.Entities;
 
 namespace ChatHistory;
 
@@ -12,6 +11,10 @@ namespace ChatHistory;
 public class Plugin : BasePlugin {
     private static Harmony harmony;
     public override void Load() {
+        if (!World.IsClient) {
+            return;
+        }
+
         Settings.Config.Load(Config, Log, "Client");
 
         AddComponent<KeyBindsBehaviour>();
@@ -20,6 +23,13 @@ public class Plugin : BasePlugin {
         Utils.Logger.Log.Trace("Patching harmony");
         harmony.PatchAll();
 
-        Utils.Logger.Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
+        Utils.Logger.Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} client side is loaded!");
+    }
+
+    public override bool Unload() {
+        harmony.UnpatchSelf();
+
+        Utils.Logger.Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} client side is unloaded!");
+        return true;
     }
 }

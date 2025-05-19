@@ -22,6 +22,17 @@ While the chat open and focused:
 - Press **Down Arrow** to navigate down through your message history
 - Press **Right Arrow** to complete the currently suggested message
 
+# Breaking Changes
+
+**Update from 1.0.0 to 1.1.0:**
+
+- The chat history format has changed from base64 encoding to URL-escaped strings.
+- To convert your old history file:
+  - On **Windows**: Download and drag your old history file onto `convert.bat`.
+  - On **Unix/Linux**: Download and drag your old history file onto `convert.bash`.
+- The new history file location is:
+  `/BepInEx/config/ChatHistory/chat.history`
+
 ## Configuration
 
 After running the plugin once, a configuration file will be created at:

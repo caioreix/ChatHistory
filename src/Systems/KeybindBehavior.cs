@@ -1,6 +1,5 @@
 using System;
 using ChatHistory.Settings;
-using RTLTMPro;
 using UnityEngine;
 
 namespace ChatHistory.Systems;
@@ -37,11 +36,10 @@ public class KeyBindsBehaviour : MonoBehaviour {
 
     private static void HistoryComplete() {
         if (History.CanComplete()) {
-            RTLTextMeshPro textMesh = History.PlaceholderClone.GetComponent<RTLTextMeshPro>();
-            History.InputField.text = textMesh.text.ToString();
+            History.InputField.text = History.PlaceholderCloneRTLTextMeshPro.text.ToString();
             History.InputField.stringPosition = History.InputField.text.Length;
             History.PlaceholderClone.enabled = false;
-            textMesh.text = "";
+            History.PlaceholderCloneRTLTextMeshPro.text = "";
         }
     }
 
@@ -55,11 +53,9 @@ public class KeyBindsBehaviour : MonoBehaviour {
         }
 
         History.PlaceholderClone.enabled = true;
-        RTLTextMeshPro placeholder = History.PlaceholderClone.GetComponent<RTLTextMeshPro>();
-        placeholder.text = historyItem;
+        History.PlaceholderCloneRTLTextMeshPro.text = historyItem;
 
         History.InputField.stringPosition = currentInput.Length;
-        History._canComplete = true;
     }
 
     private static void HistoryDown() {
@@ -72,10 +68,8 @@ public class KeyBindsBehaviour : MonoBehaviour {
         }
 
         History.PlaceholderClone.enabled = true;
-        RTLTextMeshPro placeholder = History.PlaceholderClone.GetComponent<RTLTextMeshPro>();
-        placeholder.text = historyItem;
+        History.PlaceholderCloneRTLTextMeshPro.text = historyItem;
 
         History.InputField.stringPosition = currentInput.Length;
-        History._canComplete = true;
     }
 }

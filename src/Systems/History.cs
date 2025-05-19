@@ -5,9 +5,10 @@ using System.IO;
 using System.Linq;
 using BepInEx;
 using ChatHistory.Settings;
-using Newtonsoft.Json;
+using Il2CppInterop.Runtime;
 using RTLTMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using Utils.Database;
 using Utils.Logger;
 
@@ -16,10 +17,11 @@ namespace ChatHistory.Systems;
 public class History {
     public static TMPro.TMP_InputField InputField = null;
     public static UnityEngine.UI.Graphic PlaceholderClone = null;
-    public static string LastNonEmptyMessage = "";
+    public static RTLTextMeshPro PlaceholderCloneRTLTextMeshPro => PlaceholderClone.GetComponent<RTLTextMeshPro>();
+    // public static string LastNonEmptyMessage = "";
 
     public static bool CanComplete() {
-        return !string.IsNullOrEmpty(PlaceholderClone.GetComponent<RTLTextMeshPro>().text.ToString());
+        return !string.IsNullOrEmpty(PlaceholderCloneRTLTextMeshPro.text.ToString());
     }
 
     public static void SetInputField(TMPro.TMP_InputField inputField) {
@@ -32,8 +34,13 @@ public class History {
 
             inputField.placeholder.transform.SetParent(inputField.placeholder.transform.parent.parent);
             inputField.placeholder.transform.localPosition = new Vector3(0, PlaceholderClone.transform.localPosition.y + 21, PlaceholderClone.transform.localPosition.z);
-            RTLTextMeshPro textMesh = inputField.placeholder.GetComponent<RTLTextMeshPro>();
-            textMesh.color = new Color(1, 1, 1, 1);
+            inputField.placeholder.GetComponent<RTLTextMeshPro>().color = new Color(1, 1, 1, 1);
+
+            UnityAction<string> action = DelegateSupport.ConvertDelegate<UnityAction<string>>(
+                new Action<string>(Prepend)
+            );
+            inputField.onSubmit.AddListener(action);
+
             Cache.Key("PlaceholderClone", true);
         }
 
@@ -41,32 +48,23 @@ public class History {
         InputField = inputField;
     }
 
-    private static List<string> _history = [];
+    private static readonly List<string> _history = [];
     private static bool _isFocused = false;
     private static int _currentPosition = -1;
-    public static bool _canComplete = false;
-    public static string _defaultPlaceholder = "";
 
     public static void SetDefaultPlaceholder() {
         if (PlaceholderClone == null) {
             return;
         }
 
-        _defaultPlaceholder = PlaceholderClone.GetComponent<RTLTextMeshPro>().text.ToString();
         PlaceholderClone.enabled = true;
     }
 
-    public static void Reset(string text) {
-        if (!string.IsNullOrEmpty(text)) {
-            LastNonEmptyMessage = text;
-        }
-
-        PlaceholderClone.GetComponent<RTLTextMeshPro>().text = "";
-
+    public static void Reset() {
+        PlaceholderCloneRTLTextMeshPro.text = "";
         InputField.placeholder.enabled = true;
 
         _currentPosition = -1;
-        _canComplete = false;
     }
 
     public static string GetHistory(int index) {
@@ -168,17 +166,12 @@ public class History {
             return;
         }
 
-        PlaceholderClone.GetComponent<RTLTextMeshPro>().text = "";
+        PlaceholderCloneRTLTextMeshPro.text = "";
         PlaceholderClone.enabled = false;
     }
 
     public static bool SetFocusState(bool state) {
         if (state == false) {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
-                Prepend(LastNonEmptyMessage);
-            }
-
-            LastNonEmptyMessage = "";
             _currentPosition = -1;
             SetPlaceHolderEmpty();
         }
@@ -217,7 +210,7 @@ public class History {
         return _currentPosition;
     }
 
-    private static readonly string HistoryFilePath = Path.Combine(Paths.PluginPath, "ChatHistory", "chat.history");
+    private static readonly string HistoryFilePath = Path.Combine(Paths.ConfigPath, MyPluginInfo.PLUGIN_NAME, "chat.history");
     private static int MaxHistorySize => ENV.MaximumHistorySize.Value;
     private static int TrimThreshold => ENV.MaximumHistorySize.Value * 2 < 100 ? ENV.MaximumHistorySize.Value * 2 : ENV.MaximumHistorySize.Value + 100; // Trim when file is 2x the max size
     private static int _entryCounter = 0; // Count entries between checks
@@ -231,14 +224,12 @@ public class History {
             }
 
             // Encode the string to handle special characters and line breaks
-            string encodedText = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(text));
+            string encodedText = Uri.EscapeDataString(text);
 
             // Use StreamWriter with append mode to add a single entry
             using (StreamWriter writer = new StreamWriter(HistoryFilePath, true)) {
                 writer.WriteLine(encodedText);
             }
-
-            // Increment counter and check if we should verify file size
 
             CheckAndTrimIfNeeded();
         } catch (Exception ex) {
@@ -303,8 +294,7 @@ public class History {
                 // Process lines in reverse order (newest first)
                 foreach (string encodedLine in encodedLines.Reverse()) {
                     try {
-                        byte[] bytes = Convert.FromBase64String(encodedLine);
-                        string message = System.Text.Encoding.UTF8.GetString(bytes);
+                        string message = Uri.UnescapeDataString(encodedLine);
                         _history.Add(message);
 
                         // Stop if we've reached the maximum size
