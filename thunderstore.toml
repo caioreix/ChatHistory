@@ -24,4 +24,6 @@ target = ""
 [publish]
 repository = "https://thunderstore.io"
 communities = ["v-rising"]
-categories = ["Client", "Oakveil Update"]
+
+[publish.categories]
+v-rising = ["oakveil-update", "mods", "client"]
