@@ -32,8 +32,8 @@
 
   <Import Project="Config.xml" Condition=" '$(Configuration)' == 'Test'" />
   <Target Name="CopyDLLs" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Test'">
-    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(BuildClientDestinationFolder)/Test" Condition="'$(BuildClientDestinationFolder)' != ''" />
-    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(BuildServerDestinationFolder)/Test" Condition="'$(BuildServerDestinationFolder)' != ''" />
+    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(BuildClientDestinationFolder)" Condition="'$(BuildClientDestinationFolder)' != ''" />
+    <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(BuildServerDestinationFolder)" Condition="'$(BuildServerDestinationFolder)' != ''" />
     <Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="./dist" />
   </Target>
 
