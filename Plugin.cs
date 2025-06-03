@@ -2,6 +2,8 @@
 using BepInEx.Unity.IL2CPP;
 using ChatHistory.Systems;
 using HarmonyLib;
+using UnityEngine;
+using Utils.Injection;
 using Utils.VRising.Entities;
 
 namespace ChatHistory;
@@ -10,6 +12,8 @@ namespace ChatHistory;
 
 public class Plugin : BasePlugin {
     private static Harmony harmony;
+    private static KeyBindsBehaviour keyBindsBehaviour;
+
     public override void Load() {
         if (!World.IsClient) {
             return;
@@ -17,19 +21,26 @@ public class Plugin : BasePlugin {
 
         Settings.Config.Load(Config, Log, "Client");
 
-        AddComponent<KeyBindsBehaviour>();
+        IL2CPP.Unregister<KeyBindsBehaviour>();
+        keyBindsBehaviour = AddComponent<KeyBindsBehaviour>();
 
         harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
-        Utils.Logger.Log.Trace("Patching harmony");
+        Log.LogDebug("Patching harmony");
         harmony.PatchAll();
 
-        Utils.Logger.Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} client side is loaded!");
+        Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} client side is loaded!");
     }
 
     public override bool Unload() {
-        harmony.UnpatchSelf();
+        if (!World.IsClient) {
+            return true;
+        }
 
-        Utils.Logger.Log.Info($"Plugin {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} client side is unloaded!");
+        harmony.UnpatchSelf();
+        GameObject.Destroy(keyBindsBehaviour);
+        IL2CPP.Unregister<KeyBindsBehaviour>();
+
+        Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION} client side is unloaded!");
         return true;
     }
 }
